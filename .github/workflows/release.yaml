@@ -1,0 +1,57 @@
+name: Release
+
+on: 
+  push:
+    tags:
+      v*
+
+env:
+  CARGO_TERM_COLOR: always
+  target: thumbv6m-none-eabi
+
+jobs:
+  build:
+    permissions: write-all
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Install prerequisite
+        run: sudo apt install -y libudev1 libudev-dev
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: ${{env.target}}
+          override: true
+          profile: minimal
+      - uses: actions-rs/cargo@v1
+        with:
+          command: install
+          args: flip-link elf2uf2-rs
+      - uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release
+      - name: Convert to uf2
+        run: elf2uf2-rs target/${{env.target}}/release/le-mala-enter le-mala-enter.uf2
+      - name: Zip UF2
+        run: zip le-mala-enter.zip le-mala-enter.uf2
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.event.release.tag_name }}
+          draft: false
+          prerelease: false
+      - name: Upload Release Asset
+        id: upload-release-asset 
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }} 
+          asset_path: ./le-mala-enter.zip
+          asset_name: le-mala-enter.zip
+          asset_content_type: application/zip
