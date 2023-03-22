@@ -8,16 +8,16 @@ use embassy_futures::join::join;
 use embassy_rp::gpio::{Input, Level, Output, Pull};
 use embassy_rp::interrupt;
 use embassy_rp::usb::Driver;
-use embassy_usb::{Builder, Config};
 use embassy_usb::class::hid::{HidReaderWriter, ReportId, RequestHandler, State};
 use embassy_usb::control::OutResponse;
+use embassy_usb::{Builder, Config};
 use usbd_hid::descriptor::{KeyboardReport, SerializedDescriptor};
 use {defmt_rtt as _, panic_probe as _};
 
 #[embassy_executor::main]
 async fn main(_spawner: Spawner) {
     let p = embassy_rp::init(Default::default());
-     let mut led = Output::new(p.PIN_25, Level::Low);
+    let mut led = Output::new(p.PIN_25, Level::Low);
 
     let irq = interrupt::take!(USBCTRL_IRQ);
     // Create the driver, from the HAL.
@@ -141,4 +141,3 @@ impl RequestHandler for MyRequestHandler {
         None
     }
 }
-
