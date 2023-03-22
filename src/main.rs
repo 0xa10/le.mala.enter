@@ -5,7 +5,6 @@
 use defmt::*;
 use embassy_executor::Spawner;
 use embassy_futures::join::join;
-use embassy_futures::select::{select, Either};
 use embassy_rp::gpio::{Input, Level, Output, Pull};
 use embassy_rp::interrupt;
 use embassy_rp::usb::Driver;
