@@ -5,23 +5,31 @@
 use defmt::*;
 use embassy_executor::Spawner;
 use embassy_futures::join::join;
+
 use embassy_rp::gpio::{Input, Level, Output, Pull};
-use embassy_rp::interrupt;
-use embassy_rp::usb::Driver;
-use embassy_usb::class::hid::{HidReaderWriter, ReportId, RequestHandler, State};
-use embassy_usb::control::OutResponse;
+
+use embassy_rp::bind_interrupts;
+use embassy_rp::peripherals::USB;
+
+use embassy_rp::usb::{Driver, InterruptHandler};
 use embassy_usb::{Builder, Config};
+
+use embassy_usb::class::hid::{HidReaderWriter, State};
 use usbd_hid::descriptor::{KeyboardReport, SerializedDescriptor};
+
 use {defmt_rtt as _, panic_probe as _};
+
+bind_interrupts!(struct Irqs {
+    USBCTRL_IRQ => InterruptHandler<USB>;
+});
 
 #[embassy_executor::main]
 async fn main(_spawner: Spawner) {
     let p = embassy_rp::init(Default::default());
     let mut led = Output::new(p.PIN_25, Level::Low);
 
-    let irq = interrupt::take!(USBCTRL_IRQ);
     // Create the driver, from the HAL.
-    let driver = Driver::new(p.USB, irq);
+    let driver = Driver::new(p.USB, Irqs);
 
     // Create embassy-usb Config
     let mut config = Config::new(0x1209, 0x4853);
@@ -35,7 +43,6 @@ async fn main(_spawner: Spawner) {
     let mut device_descriptor = [0; 256];
     let mut config_descriptor = [0; 256];
     let mut bos_descriptor = [0; 256];
-    let mut msos_descriptor = [0; 256];
     let mut control_buf = [0; 64];
 
     let mut state = State::new();
@@ -47,7 +54,6 @@ async fn main(_spawner: Spawner) {
         &mut config_descriptor,
         &mut bos_descriptor,
         &mut control_buf,
-        &mut msos_descriptor,
     );
 
     // Create classes on the builder.
@@ -117,27 +123,4 @@ async fn main(_spawner: Spawner) {
     // Run everything concurrently.
     // If we had made everything `'static` above instead, we could do this using separate tasks instead.
     join(usb_fut, in_fut).await;
-}
-
-struct MyRequestHandler {}
-
-impl RequestHandler for MyRequestHandler {
-    fn get_report(&self, id: ReportId, _buf: &mut [u8]) -> Option<usize> {
-        info!("Get report for {:?}", id);
-        None
-    }
-
-    fn set_report(&self, id: ReportId, data: &[u8]) -> OutResponse {
-        info!("Set report for {:?}: {=[u8]}", id, data);
-        OutResponse::Accepted
-    }
-
-    fn set_idle_ms(&self, id: Option<ReportId>, dur: u32) {
-        info!("Set idle rate for {:?} to {:?}", id, dur);
-    }
-
-    fn get_idle_ms(&self, id: Option<ReportId>) -> Option<u32> {
-        info!("Get idle rate for {:?}", id);
-        None
-    }
 }
