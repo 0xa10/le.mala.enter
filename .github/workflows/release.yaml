@@ -33,8 +33,6 @@ jobs:
           args: --release
       - name: Convert to uf2
         run: elf2uf2-rs target/${{env.target}}/release/le-mala-enter le-mala-enter.uf2
-      - name: Zip UF2
-        run: zip le-mala-enter.zip le-mala-enter.uf2
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
@@ -52,6 +50,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }} 
-          asset_path: ./le-mala-enter.zip
-          asset_name: le-mala-enter.zip
-          asset_content_type: application/zip
+          asset_path: ./le-mala-enter.uf2
+          asset_name: le-mala-enter.uf2
+          asset_content_type: application/octet-stream
